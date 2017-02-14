@@ -47,8 +47,8 @@ def resnet_cbsr_block(ns, name, bottom, nout, phase=caffe.TRAIN,
 
   return ns, relu
 
-def resnet_block(ns, idx, bottom, nout, n_sblocks, phase=caffe.TRAIN,
-                 name_suffix=''):
+def resnet_block(ns, idx, bottom, nout, n_sblocks, subsample=False,
+    phase=caffe.TRAIN, name_suffix=''):
   """
   adds a resnet block to the netspec
   :param ns: netspec
@@ -56,6 +56,7 @@ def resnet_block(ns, idx, bottom, nout, n_sblocks, phase=caffe.TRAIN,
   :param bottom: input blob to the block
   :param nout: number of output channels
   :param n_sblocks: number of block with identity shortcuts
+  :param subsample: first conv layers in both branches will have stride=2 if True
   :param phase: net phase (train / test)
   :param name_suffix: suffix to be added after layer names
   :return: netspec, top
@@ -65,9 +66,11 @@ def resnet_block(ns, idx, bottom, nout, n_sblocks, phase=caffe.TRAIN,
   bm = bottom
   for sblock in xrange(n_sblocks):
     name = '{:d}{:s}'.format(idx, alphabet[sblock])
+    first_conv_stride = 2 if (subsample and (sblock==0)) else 1
     ns, bm_b = resnet_cbsr_block(ns, '{:s}_branch2a'.format(name), bm, nout/4,
                                  phase, name_suffix,
-                                 kernel_size=1, stride=1, pad=0, bias_term=False)
+                                 kernel_size=1, stride=first_conv_stride, pad=0,
+                                 bias_term=False)
     ns, bm_b = resnet_cbsr_block(ns, '{:s}_branch2b'.format(name), bm_b, nout/4,
                                  phase, name_suffix,
                                  kernel_size=3, stride=1, pad=1, bias_term=False)
@@ -77,7 +80,8 @@ def resnet_block(ns, idx, bottom, nout, n_sblocks, phase=caffe.TRAIN,
     if sblock == 0:
       ns, bm = resnet_cbs_block(ns, '{:s}_branch1'.format(name), bm, nout/1,
                                 phase, name_suffix,
-                                kernel_size=1, stride=2, pad=0, bias_term=False)
+                                kernel_size=1, stride=first_conv_stride, pad=0,
+                                bias_term=False)
 
     eltwise = 'res{:s}{:s}'.format(name, name_suffix)
     ns[eltwise] = L.Eltwise(ns[bm], ns[bm_b])
@@ -132,6 +136,8 @@ def resnet50(ns, bottom, sblocks=None, n_outs=None, phase=caffe.TRAIN,
   bm = pool
 
   for i, (n_sblocks, n_out) in enumerate(zip(sblocks, n_outs)):
-    ns, bm = resnet_block(ns, i+2, bm, n_out, n_sblocks, phase, name_suffix)
+    subsample = True if i > 0 else False
+    ns, bm = resnet_block(ns, i+2, bm, n_out, n_sblocks, subsample, phase,
+                          name_suffix)
 
   return ns, bm
