@@ -27,9 +27,9 @@ class DatasetMeaner:
     b = np_to_proto(m)
 
     bproto_fn = osp.join(self.out_dir, 'mean_{:d}_{:d}.binaryproto'.\
-                         format(self.height, self.width))
+                         format(m.shape[0], m.shape[1]))
     npy_fn    = osp.join(self.out_dir, 'mean_{:d}_{:d}.npy'.\
-                         format(self.height, self.width))
+                         format(m.shape[0], m.shape[1]))
     with open(bproto_fn, 'wb') as f:
       f.write(b.SerializeToString())
     print 'Saved ', bproto_fn
