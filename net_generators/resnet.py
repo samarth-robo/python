@@ -151,4 +151,10 @@ def resnet50(ns, bottom, sblocks=None, n_outs=None, phase=caffe.TRAIN,
     ns, bm = resnet_block(ns, i+2, bm, n_out, n_sblocks, subsample, phase,
                           name_suffix, inc_exc_dict=exclude_dict)
 
+  # final global average pooling layer
+  ga_pool = 'pool{:d}{:s}'.format(len(sblocks)+1, name_suffix)
+  ns[ga_pool] = L.Pooling(ns[bm], stride=1, pool=P.Pooling.AVE,
+      global_pooling=True, **exclude_dict)
+  bm = ga_pool
+
   return ns, bm
